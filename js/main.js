@@ -65,4 +65,50 @@
       }
     });
   });
+
+  // Carrossel da seção de consultoria
+  var carouselSlides = document.querySelectorAll(".carousel-slide");
+  if (carouselSlides.length > 1) {
+    var carouselIndex = 0;
+    window.setInterval(function () {
+      carouselSlides[carouselIndex].classList.remove("is-active");
+      carouselSlides[carouselIndex].setAttribute("aria-hidden", "true");
+      carouselIndex = (carouselIndex + 1) % carouselSlides.length;
+      carouselSlides[carouselIndex].classList.add("is-active");
+      carouselSlides[carouselIndex].setAttribute("aria-hidden", "false");
+    }, 4000);
+  }
+
+  // Reproduz o vídeo do manifesto apenas enquanto ele está visível
+  var manifestoVideo = document.querySelector(".instagram-video");
+  if (manifestoVideo) {
+    var manifestoSection = document.querySelector(".manifesto");
+    var videoIsVisible = false;
+    var setVideoPlayback = function (isVisible) {
+      videoIsVisible = isVisible;
+      if (isVisible) {
+        var playPromise = manifestoVideo.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(function () {});
+        }
+      } else {
+        manifestoVideo.pause();
+      }
+    };
+
+    manifestoVideo.addEventListener("loadeddata", function () {
+      if (videoIsVisible) setVideoPlayback(true);
+    });
+
+    if ("IntersectionObserver" in window && manifestoSection) {
+      var videoObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          setVideoPlayback(entry.isIntersecting);
+        });
+      }, { threshold: 0.35 });
+      videoObserver.observe(manifestoSection);
+    } else {
+      setVideoPlayback(true);
+    }
+  }
 })();
