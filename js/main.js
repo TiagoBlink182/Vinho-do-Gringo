@@ -70,13 +70,34 @@
   var carouselSlides = document.querySelectorAll(".carousel-slide");
   if (carouselSlides.length > 1) {
     var carouselIndex = 0;
-    window.setInterval(function () {
+    var carouselToggle = document.querySelector(".carousel-toggle");
+    var carouselPaused = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var carouselTimer;
+    var advanceCarousel = function () {
       carouselSlides[carouselIndex].classList.remove("is-active");
       carouselSlides[carouselIndex].setAttribute("aria-hidden", "true");
       carouselIndex = (carouselIndex + 1) % carouselSlides.length;
       carouselSlides[carouselIndex].classList.add("is-active");
       carouselSlides[carouselIndex].setAttribute("aria-hidden", "false");
-    }, 4000);
+    };
+    var stopCarousel = function () {
+      window.clearInterval(carouselTimer);
+    };
+    var startCarousel = function () {
+      stopCarousel();
+      if (!carouselPaused) carouselTimer = window.setInterval(advanceCarousel, 4000);
+    };
+    if (carouselToggle) {
+      carouselToggle.setAttribute("aria-pressed", carouselPaused ? "true" : "false");
+      carouselToggle.setAttribute("aria-label", carouselPaused ? "Continuar galeria" : "Pausar galeria");
+      carouselToggle.addEventListener("click", function () {
+        carouselPaused = !carouselPaused;
+        carouselToggle.setAttribute("aria-pressed", carouselPaused ? "true" : "false");
+        carouselToggle.setAttribute("aria-label", carouselPaused ? "Continuar galeria" : "Pausar galeria");
+        startCarousel();
+      });
+    }
+    startCarousel();
   }
 
   // Reproduz o vídeo do manifesto apenas enquanto ele está visível
