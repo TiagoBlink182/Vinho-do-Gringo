@@ -223,6 +223,161 @@
     </div>
   </div>
 </section>
+<!-- =================================================== -->
+<!-- Sommelier com IA => -->
+
+<div id="sommelier-box">
+  <style>
+    #sommelier-box{width:100%;max-width:1100px;box-sizing:border-box;margin:30px auto;border:1px solid #e3d5da;border-radius:14px;overflow:hidden;font-family:Arial,sans-serif;background:#fff;box-shadow:0 4px 18px rgba(0,0,0,.08)}
+    #sommelier-box *{box-sizing:border-box}
+    #sommelier-box .sm-head{background:#6b1f3a;color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;font-weight:bold;font-size:18px;gap:10px}
+    #sommelier-box .sm-title{display:flex;align-items:center;gap:12px}
+    #sommelier-box .sm-logo{height:56px;width:auto;display:block}
+    #sommelier-box .sm-restart{background:transparent;border:1px solid #fff;color:#fff;border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;white-space:nowrap}
+    #sommelier-box .sm-restart:hover{background:#fff;color:#6b1f3a}
+    #sommelier-box .sm-msgs{height:400px;overflow-y:auto;padding:16px;background:#faf6f7;display:flex;flex-direction:column;gap:10px}
+    #sommelier-box .sm-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:15px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
+    #sommelier-box .sm-bot{background:#fff;border:1px solid #e3d5da;align-self:flex-start;color:#333}
+    #sommelier-box .sm-user{background:#6b1f3a;color:#fff;align-self:flex-end}
+    #sommelier-box .sm-bot a{color:#6b1f3a;font-weight:bold}
+    #sommelier-box .sm-opts{display:flex;flex-direction:column;gap:12px;padding:0 16px 16px;background:#faf6f7}
+    #sommelier-box .sm-opt{background:#fff;border:2px solid #6b1f3a;color:#6b1f3a;border-radius:12px;padding:20px 18px;min-height:68px;text-align:left;font-size:16px;line-height:1.3;cursor:pointer}
+    #sommelier-box .sm-opt:hover{background:#6b1f3a;color:#fff}
+    #sommelier-box .sm-form{display:flex;border-top:1px solid #e3d5da}
+    #sommelier-box .sm-form input{flex:1;border:none;padding:16px;font-size:15px;outline:none;min-width:0}
+    #sommelier-box .sm-form button{background:#6b1f3a;color:#fff;border:none;padding:0 24px;cursor:pointer;font-size:15px}
+    #sommelier-box .sm-form button:disabled,#sommelier-box .sm-form input:disabled{opacity:.5;cursor:not-allowed}
+    @media(max-width:600px){#sommelier-box{margin:15px 0;border-radius:0}#sommelier-box .sm-logo{height:44px}#sommelier-box .sm-head{font-size:16px}}
+  </style>
+  <div class="sm-head">
+    <div class="sm-title">
+      <img class="sm-logo" src="LogoVinhodoGringoOficial-semfundo.png" alt="Vinho do Gringo">
+      <span>Sommelier Virtual</span>
+    </div>
+    <button class="sm-restart" id="sm-restart" type="button">↻ Reiniciar</button>
+  </div>
+  <div class="sm-msgs" id="sm-msgs"></div>
+  <div class="sm-opts" id="sm-opts"></div>
+  <form class="sm-form" id="sm-form">
+    <input id="sm-input" type="text" placeholder="Escolha uma opção acima para começar..." autocomplete="off" disabled>
+    <button type="submit" id="sm-send" disabled>Enviar</button>
+  </form>
+</div>
+
+<script>
+(function(){
+  var ENDPOINT = 'https://tiagoblink182.app.n8n.cloud/webhook/3d1e0f8a-7a24-4758-b1f3-5325723d2e54/chat';
+  var OPTIONS = [
+    'Quero descobrir qual vinho é mais adequado para o meu paladar.',
+    'Quero um vinho para harmonizar com uma receita que vou cozinhar.',
+    'Quero uma sugestão de vinho para um momento especial.'
+  ];
+  var msgs = document.getElementById('sm-msgs');
+  var opts = document.getElementById('sm-opts');
+  var form = document.getElementById('sm-form');
+  var input = document.getElementById('sm-input');
+  var send = document.getElementById('sm-send');
+  var sessionId = '';
+  var busy = false;
+
+  function newSession(){
+    sessionId = 'site-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function render(text){
+    var h = escapeHtml(text);
+    h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    h = h.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    return h;
+  }
+
+  function addMsg(text, who){
+    var d = document.createElement('div');
+    d.className = 'sm-msg ' + (who === 'user' ? 'sm-user' : 'sm-bot');
+    if (who === 'user') { d.textContent = text; } else { d.innerHTML = render(text); }
+    msgs.appendChild(d);
+    msgs.scrollTop = msgs.scrollHeight;
+    return d;
+  }
+
+  function setInputEnabled(on){
+    input.disabled = !on;
+    send.disabled = !on;
+    if (on) { input.placeholder = 'Digite sua mensagem...'; input.focus(); }
+  }
+
+  function showOptions(){
+    opts.innerHTML = '';
+    opts.style.display = 'flex';
+    OPTIONS.forEach(function(t, i){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sm-opt';
+      b.textContent = (i + 1) + ' - ' + t;
+      b.addEventListener('click', function(){
+        opts.style.display = 'none';
+        sendMessage(t);
+      });
+      opts.appendChild(b);
+    });
+  }
+
+  function sendMessage(text){
+    if (busy || !text) return;
+    busy = true;
+    addMsg(text, 'user');
+    setInputEnabled(false);
+    var wait = addMsg('Consultando o portfólio da Wine...', 'bot');
+    var mySession = sessionId;
+    fetch(ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'sendMessage', sessionId: mySession, chatInput: text})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (mySession !== sessionId) return;
+      wait.innerHTML = render(data.output || data.text || 'Desculpe, não consegui responder agora.');
+    })
+    .catch(function(){
+      if (mySession !== sessionId) return;
+      wait.textContent = 'Ops, ocorreu um erro. Tente novamente em instantes.';
+    })
+    .then(function(){
+      busy = false;
+      if (mySession === sessionId) { setInputEnabled(true); msgs.scrollTop = msgs.scrollHeight; }
+    });
+  }
+
+  function start(){
+    newSession();
+    busy = false;
+    msgs.innerHTML = '';
+    addMsg('Olá! Como posso ajudar? Escolha uma das opções abaixo para começar.', 'bot');
+    input.value = '';
+    input.disabled = true;
+    send.disabled = true;
+    input.placeholder = 'Escolha uma opção acima para começar...';
+    showOptions();
+  }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var t = input.value.trim();
+    if (!t) return;
+    input.value = '';
+    sendMessage(t);
+  });
+
+  document.getElementById('sm-restart').addEventListener('click', start);
+
+  start();
+})();
+</script>
 
 <!-- ======================= PROVA / BENEFÍCIOS ======================= -->
 <section class="proof-band section-pad">
